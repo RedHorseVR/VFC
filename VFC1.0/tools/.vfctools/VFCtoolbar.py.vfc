@@ -1,0 +1,154 @@
+;  IRL FlowCode Version: Version 10.0
+;  c1995-2015: Visual Flow Coder by 2LResearch
+;
+;  File Name : VFCtoolbar.py.vfc
+;  File Date : 01:52:57 PM - 07:May:2026
+
+event(import os);// 
+event(import sys);// 
+event(import subprocess);// 
+event(import pyperclip);// 
+event(import webbrowser);//
+event(from PyQt5 import uic);// 
+event(from colorama import Fore, Style, init; init(););//
+event(from PyQt5.QtWidgets import QApplication, QDialog);// 
+event(from PyQt5.QtCore import Qt, QEvent);//
+generic();//
+generic();//
+set();//  Load the .ui file (must be in the same directory as this script)
+set(UI_FILE = os.path.join(os.path.dirname(__file__), "VFCtoolbar.ui"));// 
+end();//
+
+input(def clean( s ):);//
+set(clean = "");//
+loop(for line in s.splitlines(keepends=False) :);//
+generic();//
+branch(if line != "\n"   :);//
+path( );//
+set(clean = clean+line + "\n");//
+bend( );//
+lend();//
+end(return clean.rstrip());//
+event(class ToolbarApp(QDialog):);// 
+branch();//
+path();//
+path();//
+
+input(def __init__(self):);// 
+set(super().__init__());// 
+set(self.setStyleSheet("background-color: rgb(31, 128, 255) ; color: white;"));//self.setStyleSheet("background-color: #1F1F7A;")
+set(uic.loadUi(UI_FILE, self));// 
+set(self.setWindowTitle("VFC Tools"));// 
+generic();//
+branch(self.setWindowFlags();// ////
+path();//
+generic(self.windowFlags() | Qt.WindowStaysOnTopHint);// ////
+generic();//& ~Qt.WindowContextHelpButtonHint 
+bend());// ////
+set();//  Wire buttons defined in the .ui file
+set(QApplication.instance().installEventFilter(self));//
+set(self.showClipboard.clicked.connect(self.print_clipboard));// "Show Clipboard"
+set(self.openWorkspace.clicked.connect(self.open_current_dir));// "Open Workspace"
+set(self.flowClipboard.clicked.connect(self.flow_clipboard));//
+set(self.openCLI.clicked.connect(self.open_cli));//
+set(self.openXMIND.clicked.connect(self.open_xmind ));//
+end();// 
+
+input(def eventFilter(self, obj, event):);// 
+branch(if event.type() == QEvent.EnterWhatsThisMode:);// 
+path();//
+set(QApplication.instance().removeEventFilter(self));// 
+set(webbrowser.open("https://github.com/RedHorseVR/VFlow"));// 
+end(return True);// 
+bend();// 
+end(return super().eventFilter(obj, event));// 
+end();// 
+set();//  --- Actions ---
+generic();//
+
+input(def flow_clipboard(self):);// 
+set(os.system("cls" if os.name == "nt" else "clear"));// 
+set(content = pyperclip.paste());// 
+set(path = os.getcwd());// 
+output(print("=== FLOWING CLIPBOARD CONTENT ==="));// 
+branch(with open("temp.txt", "w", encoding="ascii", errors="backslashreplace") as f:);//
+path( );//
+output(print( '------------------------------------------------'));//
+output(f.write(  clean( content ) ));//
+bend( );//
+set(flowcmd = "vfc temp.txt");// flowcmd = "PYPARSE.bat temp.txt"
+set( );//vfccmd = "C:\\Program Files\\VFCode\\VFC1.0t temp.txt.vfc -Reload"
+output(print( flowcmd ));// 
+set( os.system( flowcmd ));//os.system( "dir temp.txt" )
+process();//
+end();// 
+
+input(def print_clipboard(self):);// 
+set();//os.system("cls" if os.name == "nt" else "clear")
+set(content = pyperclip.paste());// 
+generic(os.system("cls"));//
+generic(os.system("color B1"));//
+output(print( Fore.YELLOW + '' , end =''  ));//
+set(print("=== CLIPBOARD CONTENT ==="));// 
+output(print( '------------------------------------------------'));//
+output(print( Fore.BLUE + '' , end ='' ));//
+output(print( clean(content) ));// 
+output(print( Fore.YELLOW + '------------------------------------------------' ));//
+end();// 
+
+input(def open_current_dir(self):);// 
+set(path = os.getcwd());// 
+branch(if os.name == "nt":);// Windows #beginif
+path();//
+set(os.startfile(path));// 
+path(elif os.name == "posix":);// macOS / Linux
+set(subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", path]));// 
+bend();// 
+end();// 
+
+input(def open_cli(self):);// 
+set(path = os.getcwd());// 
+set(os.system(' start cmd /k "color 1F & title VFC TOOLBAR: CLI"' ));//os.system( "start cmd /k color 1F" )
+end();// 
+
+input(def open_xmind(self):);// 
+set(path = os.getcwd());// 
+set(cmd = "start VFlow.xmind");// 
+set(os.system( cmd ));// 
+end();// 
+set();//  --- Easy extension helper ---
+generic();//
+
+input(def add_button(self, label, func):);// 
+set("""Dynamically wire any QPushButton added to the .ui file later.""");//
+set(btn = self.findChild(type(self.pushButton), label));// 
+branch(if btn:);// 
+path();//
+set(btn.clicked.connect(func));// 
+bend();// 
+end();// 
+bend();//
+end();// 
+generic();//
+generic();//
+branch(if __name__ == "__main__":);// 
+path();//
+generic(os.system("title VFC TOOLBAR: CLIPBOARD"));// ////
+generic(os.system("color B1"));//
+set();//os.system("mode con: cols=50 lines=30")
+set();//
+set(app = QApplication(sys.argv));// 
+set(window = ToolbarApp());// 
+set(window.show());// 
+set(sys.exit(app.exec_()));// 
+end(os._exit( 0 ));//
+bend();// 
+
+
+
+;INSECTA EMBEDDED SESSION INFORMATION
+; 255 16777215 65280 16777088 16711680 13158600 8388863 0 255 255 8454143 6946660 3684381
+;    VFCtoolbar.py   #   .
+; notepad.exe
+;INSECTA EMBEDDED ALTSESSION INFORMATION
+; 893 262 1220 1777 100 190   4294967124   4294963096    python.key  0

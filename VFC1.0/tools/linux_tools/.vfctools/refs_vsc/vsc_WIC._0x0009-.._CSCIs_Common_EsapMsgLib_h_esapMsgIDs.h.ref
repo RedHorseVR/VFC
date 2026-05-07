@@ -1,0 +1,4 @@
+WORKSPACE ROOT: /home/localadmin/iLauncher/Enduring-Shield
+REFERENCES FOR WIC.*0x0009
+
+CSCIs/Common/EsapMsgLib/h/esapMsgIDs.h:154

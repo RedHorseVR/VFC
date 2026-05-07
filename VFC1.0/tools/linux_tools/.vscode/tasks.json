@@ -1,0 +1,83 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+
+        {
+            "label": "clear-ref-problems",
+            "type": "shell",
+            "command": "echo ''",
+            "problemMatcher": [
+                {
+                    "owner": "ref-files",
+                    "pattern": {
+                        "regexp": "a^"   // matches nothing
+                    }
+                }
+            ]
+        },
+
+
+
+        {
+            "label": "parse-ref-diagnostics",
+            "type": "shell",
+            "command": "find . -name \"*.ref\" -type f -print0 | xargs -0 cat",
+            "group": "build",
+            "problemMatcher": {
+                "owner": "ref-files",
+                "severity": "warning",
+                "applyTo": "allDocuments",
+                "fileLocation": ["relative", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^\\s*(.+):(\\d+)",
+                    "file": 1,
+                    "line": 2
+                }
+            }
+        },
+
+        {
+            "label": "vfc-toolbar",
+            "type": "shell",
+            "command": "start python .vfctools/VFCtoolbar.py",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        
+/*        {
+            "label": "vfc-parse-clip",
+            "type": "shell",
+            "command": "vfcparseclip",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        
+        {
+            "label": "vfc-flowgraph-tool",
+            "type": "shell",
+            "command": "vfc ${file} ${lineNumber}",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+*/
+        {
+            "label": "clang-tidy-fix-braces",
+            "type": "shell",
+            "command": "clang-tidy -p . -fix -checks=\\\"readability-braces-around-statements,hicpp-braces-around-statements,bugprone-suspicious-semicolon\\\" \\\"${file}\\\"",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        }
+
+
+           
+        
+    ]
+}
