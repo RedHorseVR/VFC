@@ -2,7 +2,19 @@
     "version": "2.0.0",
     "tasks": [
 
-
+ {
+            "label": "clear-ref-problems",
+            "type": "shell",
+            "command": "echo ''",
+            "problemMatcher": [
+                {
+                    "owner": "ref-files",
+                    "pattern": {
+                        "regexp": "a^"   // matches nothing
+                    }
+                }
+            ]
+        },
 
         {
             "label": "parse-ref-diagnostics",
