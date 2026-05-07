@@ -2,7 +2,7 @@
 ;  c1995-2015: Visual Flow Coder by 2LResearch
 ;
 ;  File Name : VFCtoolbar.py.vfc
-;  File Date : 01:52:57 PM - 07:May:2026
+;  File Date : 03:29:55 PM - 23:Apr:2026
 
 event(import os);// 
 event(import sys);// 
@@ -12,12 +12,99 @@ event(import webbrowser);//
 event(from PyQt5 import uic);// 
 event(from colorama import Fore, Style, init; init(););//
 event(from PyQt5.QtWidgets import QApplication, QDialog);// 
+event(from PyQt5.QtWidgets import QDialog, QComboBox, QVBoxLayout);//
 event(from PyQt5.QtCore import Qt, QEvent);//
 generic();//
 generic();//
 set();//  Load the .ui file (must be in the same directory as this script)
 set(UI_FILE = os.path.join(os.path.dirname(__file__), "VFCtoolbar.ui"));// 
 end();//
+branch(TYPE_PREFIXES = [);// 
+path();//
+set("generic(", "input(", "process(", "set(", "output(",);// 
+set("loop(", "lend(", "branch(", "path(","bend(", "end(", "var(");// 
+bend(]);// 
+branch(INDENT = [);// 
+path();//
+set( "input(",);// 
+set("loop(", "branch(");// 
+bend(]);// 
+branch(OUTDENT = [);// 
+path();//
+set( "lend(",  "bend(");// 
+bend(]);// 
+generic();//
+set(VFCDEL = ");" + "//");// 
+set(LANGUAGE_COMMENT = "#");// 
+end();//
+
+input(def export_vfc(text):);// #beginfunc
+set(out = []);// 
+set(text = clean(text));// 
+set(indent = 0);//
+set(outdent = False);//
+set(input_level = 0);//
+loop(for line in text.splitlines():);// #beginfor
+set();//   Remove TYPE prefix
+loop(for prefix in TYPE_PREFIXES:);// #beginfor
+branch(if line.startswith(prefix):);// #beginif
+path();//
+set(line = line[len(prefix):]);// 
+set();//   Remove first VFCDEL
+branch(if VFCDEL in line:);// 
+path();//
+set(before, after = line.split(VFCDEL, 1));// 
+set();//  If there is comment text after VFCDEL \u2192 keep comment
+branch(if after.strip():);// 
+path();//
+set(line = before + LANGUAGE_COMMENT + after);// 
+path(else:);// 
+set(line = before);// 
+bend();// 
+generic();//
+path(else:);// 
+set();//  No VFCDEL \u2192 remove plain );
+set(line = line.replace(");", "", 1));// 
+bend();// 
+generic();//
+end(break);// 
+bend();// 
+lend();// 
+branch(if input_level > 0 and prefix == 'end('  :);//
+path();//
+branch(if input_level == indent   :);//
+path();//
+set(input_level -= 1);//
+set(indent -= 1);//
+bend( );//
+bend( );//
+branch(if 'input' in prefix  :);//
+path();//
+set(input_level += 1);//
+bend( );//
+branch(if 'path' in prefix  :);//
+path();//
+set(indent -= 1);//
+bend( );//
+output(out.append(  "    "*indent + line));// 
+branch(if 'path' in prefix  :);//
+path();//
+set(indent += 1);//
+bend( );//
+branch(if prefix in INDENT  :);//
+path( );//
+set(indent += 1);//
+path(elif  prefix in OUTDENT :);//
+set(outdent= True);//
+bend( );//
+branch(if outdent   :);//
+path( );//
+set(outdent = False);//
+set(indent -= 1);//
+bend( );//
+lend();// 
+end(return "\n".join(out));// 
+end();// 
 
 input(def clean( s ):);//
 set(clean = "");//
@@ -36,9 +123,10 @@ path();//
 
 input(def __init__(self):);// 
 set(super().__init__());// 
-set(self.setStyleSheet("background-color: rgb(31, 128, 255) ; color: white;"));//self.setStyleSheet("background-color: #1F1F7A;")
+set(self.setStyleSheet("background-color: rgb(31, 128, 255) ; color: white;"));//
 set(uic.loadUi(UI_FILE, self));// 
 set(self.setWindowTitle("VFC Tools"));// 
+generic(self.comboBox.addItems(["<none selected>", "python", "C++", "MatLab"]));//
 generic();//
 branch(self.setWindowFlags();// ////
 path();//
@@ -52,6 +140,21 @@ set(self.openWorkspace.clicked.connect(self.open_current_dir));// "Open Workspac
 set(self.flowClipboard.clicked.connect(self.flow_clipboard));//
 set(self.openCLI.clicked.connect(self.open_cli));//
 set(self.openXMIND.clicked.connect(self.open_xmind ));//
+set(self.showExport.clicked.connect(self.show_export ));//
+end();// 
+
+input(def show_export(self):);// 
+set();//os.system("cls" if os.name == "nt" else "clear")
+set(content = pyperclip.paste());// 
+generic(os.system("cls"));//
+generic(os.system("color B1"));//
+output(print( Fore.BLACK + '' , end =''  ));//
+set(print("=== EXPORTED CODE  ==="));// 
+output(print( '------------------------------------------------'));//
+output(print( Fore.BLUE + '' , end ='' ));//
+output(print( Fore.GREEN + '' , end ='' ));//
+output(print( export_vfc(content) ));// 
+output(print( Fore.RED + "----------------------------------" ));//
 end();// 
 
 input(def eventFilter(self, obj, event):);// 
@@ -71,13 +174,15 @@ set(os.system("cls" if os.name == "nt" else "clear"));//
 set(content = pyperclip.paste());// 
 set(path = os.getcwd());// 
 output(print("=== FLOWING CLIPBOARD CONTENT ==="));// 
+generic(value = self.comboBox.currentText());// ////
+output(print( f"Using parser: {value} " ););// 
 branch(with open("temp.txt", "w", encoding="ascii", errors="backslashreplace") as f:);//
 path( );//
 output(print( '------------------------------------------------'));//
 output(f.write(  clean( content ) ));//
 bend( );//
-set(flowcmd = "vfc temp.txt");// flowcmd = "PYPARSE.bat temp.txt"
-set( );//vfccmd = "C:\\Program Files\\VFCode\\VFC1.0t temp.txt.vfc -Reload"
+set(flowcmd = "C:\\Users\\luisr\\Python_parser\\PYPARSE.bat temp.txt");//flowcmd = f"dir C:/Users/\luisr/Python_parser/PYPARSE.bat temp.py"
+set(vfccmd = "C:\\Program Files\\VFCode\\VFC1.0t temp.txt.vfc -Reload");// 
 output(print( flowcmd ));// 
 set( os.system( flowcmd ));//os.system( "dir temp.txt" )
 process();//
@@ -147,8 +252,8 @@ bend();//
 
 
 ;INSECTA EMBEDDED SESSION INFORMATION
-; 255 16777215 65280 16777088 16711680 13158600 8388863 0 255 255 8454143 6946660 3684381
+; 255 16777215 65280 16777088 16711680 13158600 8388863 0 255 255 8454143 6946660 3086080
 ;    VFCtoolbar.py   #   .
 ; notepad.exe
 ;INSECTA EMBEDDED ALTSESSION INFORMATION
-; 893 262 1220 1777 100 190   4294967124   4294963096    python.key  0
+; 983 278 1190 1729 34 89   655   4294966259    python.key  0
