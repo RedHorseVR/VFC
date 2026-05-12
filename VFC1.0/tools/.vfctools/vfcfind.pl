@@ -1,321 +1,579 @@
-use Cwd 'getcwd';# ////
-use File::Spec;# ////
-use File::Find;#// //////
-use File::Basename;# ////
-use File::Find::Rule;# ////
-$HIT_TOTAL = 0;
-my $cwd = getcwd();# ////
+#!/usr/bin/env perl
+#
+# vfcfind.pl — Recursive VFC-aware file / text / filename scanner
+#
+# Features:
+#   - Search file contents for a regex "search_key_expression"
+#   - Filter which files are scanned via "filter_pattern"
+#   - Optional folder include/exclude via "folder_filter"
+#   - Special ".files" mode: filename-only search, VSCode-clickable output
+#   - Optional "--save" to generate VSCode reference files under refs_vsc/
+#
+# Usage:
+#   vfcfind.pl <filter_pattern> <search_key_expression> [folder_filter] [--save]
+#
+#   <filter_pattern>:
+#     - ".vfc"          → scan files ending in ".vfc"
+#     - ".cpp"          → scan files ending in ".cpp"
+#     - ".h,.cpp"       → scan files ending in ".h" or ".cpp"
+#     - "."             → scan all files
+#     - ".files"        → special mode: search filenames only (see below)
+#     - "*.files"       → same as ".files"
+#     - "files"         → same as ".files"
+#
+#   <search_key_expression>:
+#     - Perl regular expression used to match lines (or filenames in .files mode)
+#     - Example: "WIC", "HAL", "MyFunc\\(", "^(?i)wic" etc.
+#
+#   [folder_filter]:
+#     - Optional, treated as a Perl regular expression (no automatic /i)
+#     - "src"          → only folders whose path matches /src/
+#     - "!test"        → exclude folders whose path matches /test/
+#     - "(?i)src"      → case-insensitive match, user-controlled
+#
+#   [--save]:
+#     - When present, matching lines are recorded into refs_vsc/*.ref files
+#       for VSCode "vfc" integration.
+#
+# Special ".files" mode:
+#   - If <filter_pattern> is ".files", "*.files", or "files":
+#       → Do NOT scan file contents
+#       → Instead, search only filenames using <search_key_expression> as regex
+#       → Output: "relative/path/to/file:1" (VSCode ctrl-click friendly)
+#
+# Notes:
+#   - Case sensitivity is entirely controlled by your regexes.
+#   - No automatic /i is added anywhere.
+#
 
-my $ps;#// //////
-sub start_powershell {# ////
-	return if $ps;# ////
-# // Open a persistent PowerShell process//
-open($ps, '|-', 'powershell -Command -') or die "Can't start PowerShell: $!";# ////
-select((select($ps), $| = 1)[0]);# // Autoflush to make output instant//
-}#// //////
-sub cprint {# ////
-	my ($text, $color) = @_;# ////
-	# // Escape any single quotes in the text to prevent PowerShell issues //
-	start_powershell();# // Ensure PowerShell is running//
-	# // Escape any single quotes//
-	$text =~ s/'/'\''/g;# ////
-	#// // Send the command to PowerShell////
-	print $ps "Write-Host '$text' -ForegroundColor $color\n";# ////
-	} 
-sub path_to_safe_term {# ////
-	my ($path) = @_;# ////
-	# // 1. Get current working directory //
-	my $cwd = getcwd();# ////
-	# // 2. Convert to relative path //
-	my $rel = File::Spec->abs2rel($path, $cwd);# ////
-	# // 3. Normalize slashes //
-	$rel =~ s!\\!/!g;# ////
-	# // 4. Replace path separators with underscores //
-	$rel =~ s!/!_!g;# ////
-	# // 5. Remove anything unsafe for filenames //
-	$rel =~ s![^A-Za-z0-9._-]!_!g;# ////
-	# // 6. Collapse multiple underscores //
-	$rel =~ s/_+/_/g;# ////
-	# // 7. Trim leading/trailing underscores //
-	$rel =~ s/^_+//;# ////
-	$rel =~ s/_+$//;# ////
-	# // 8. Guarantee non-empty //
-	return $rel || "unnamed";# ////
-}# ////
-$default = "\e[0m" ;#resets to default color
-my $reset     = "\e[0m";# ////
-my $bold      = "\e[1m";# ////
-my $black     = "\e[30m";# ////
-my $red       = "\e[31m";# ////
-my $green     = "\e[32m";# ////
-my $yellow    = "\e[33m";# ////
-my $blue      = "\e[34m";# ////
-my $magenta   = "\e[35m";# ////
-my $cyan      = "\e[36m";# ////
-my $white     = "\e[37m";# ////
-# // Bright variants//
-my $bright_red     = "\e[1;31m";# ////
-my $bright_green   = "\e[1;32m";# ////
-my $bright_yellow  = "\e[1;33m";# ////
-my $bright_blue    = "\e[1;34m";# ////
-sub GetLines{ local ( $filename , $word_to_find  , $type ) = @_;
-	my $line_number = 0;# ////
-	$found = 0;
-	$found_in_file = 0;
-	$VScodeData = "" ;
-	$NPPcodeData = "" ;
-	#print( "\nScanning _____ $word_to_find ____________  $type :: in file $filename\n" );
-	open(my $fh, '<', $filename) or die "\n\t*********************** Could not open file '$filename' $!";# ////
-	$VFCtoken = "^(generic|variable|input|event|process|set|output|loop|lend|branch|path|bend|end)" ;
-	while (my $row = <$fh>) {# ////
-		# // Remove ANSI escape sequences //
-		$row =~ s/\x1B[\(\)][0-9A-Za-z]*//g;#  # Extra escape variations
-		$row =~ s/[^\x20-\x7E\r\n\t]//g;# // Removes non-printable, keeps tabs/newlines//
-		if ($row =~ /[^\x00-\x7F]/   || $row =~ m/\x/ )#if ($row[$i] !~ /^[\x01-\x7F]*$/)
-		{
-			next ;#// //////
-			
-		} else {
-			}
-		$line_number++;# ////
-		if(  $EXTEN =~ m/vfc/i  ) { $row =~ s/$VFCtoken// } ;#<---- CLEANS THE TOKEN FOR vfc FILE ONLY 
-		#$tok = $& ;
-		#$row =~ s/;\/\/.*// ;
-		$row =~ s/\n// ;
-		if($row =~ m/$word_to_find/) {#/// ////////if($row =~ /\b$word_to_find\b/) {
-			$FileName = "$cwd/$filename" ;
-			if ( $type =~ m/$VFCtoken/  &&  $EXTEN =~ m/vfc/i   )
-			{
-				if ( $tok =~ m/^$type/ )
-				{
-					$found += 1;
-					if ( $EXTEN =~ m/vfc/i  )
-					{
-						print "$bright_green";
-						print "\tvfc $FileName $line_number\t$default|--------> $tok$row;\n";
-						}
-				}else{
-					}
-			}else{
-				$found += 1;
-				if ( $EXTEN =~ m/vfc/i  )
-				{
-					#print "$green";
-					cprint( "\tvfc $FileName $line_number\t$default|---- $EXTEN ----> $tok$row;" , 'red'  );# ////
-				} else {
-					if (-e "$filename.vfc" )
-					{
-						#print "$cyan";
-						cprint ( "\tvfc $FileName $line_number\t$default| line: $line_number  ---$EXTEN ----> $tok$row", 'cyan' );# ////
-					} elsif( $filename !~ /\.vfc$/ ) {
-						#print "$yellow";
-						cprint ( "$FileName:$line_number" , 'yellow'  );#cprint ( "\tvfc $FileName   $line_number\t$default| line: $line_number  ---$EXTEN ----> $tok$row" , 'yellow'  );
-						#print ( "\t|----> $tok$row\n" , );
-						}
-					}
-				}
-			#print "$bright_green";
-			#print ( "\t---------------------------------- $filename  \n" );
-			$NPPcodeData = "$NPPcodeData\tnotepad++.exe -n$line_number -multiInst\t$FileName \n\t\t|$line_number)\t$tok$row\n\n";
-			#$VScodeData = "$VScodeData\tcode  -g $filename:$line_number \t|--------> $tok$row\n";
-			$VScodeData = "$VScodeData\t$filename:$line_number\n" ;#$VScodeData = "$VScodeData\t$FileName:$line_number\n" ;
-			$found_in_file++;
-			}#// //////
-		#print "$reset";
-		}#// //////
-	
-	if ( $found_in_file > 0 )
-	{
-		my $dir  = dirname($filename);#my $dir  = dirname($FileName);
-		($name)= basename( $filename );#my ($name) = fileparse($filename, qr/\.[^.]*/);
-		$search_term = $word_to_find ;
-		$search_term =~ s/[\\\/:*?"<>|]+/_/g;
-		$term = path_to_safe_term($filename);
-		#print( "$search_term ==== $found_in_file\tREFERENCES FOUND in FILE: $name =========== PATH: $dir ===========\n" );
-		if ( $save == 1 )
-		{
-			mkdir "refs_npp"  ;
-			$file = "refs_npp/npp_$search_term-$term-$name.ref" ;#$file = "npp_XXX_$name.ref" ;
-			open my $fh, '>', $file or die "Cannot open $file: $!";
-				#print( "$NPPcodeData\n" );
-				print( $fh "CURRENT DIRECTORY: $cwd\n" );
-				print( $fh "REFERENCES FOR $word_to_find on PATH: $dir  FILE: $name\n\n" );
-				print( $fh "$NPPcodeData\n" );
-				close $fh or die "Cannot close $file: $!";
-			mkdir "refs_vsc"  ;
-			$file = "refs_vsc/vsc_$search_term-$term-$name.ref" ;
-			open my $fh, '>', $file or die "Cannot open $file: $!";
-				#print( "$VScodeData\n" );
-				print( $fh "CURRENT DIRECTORY: $cwd\n" );
-				print( $fh "REFERENCES FOR $word_to_find on PATH: $dir  FILE: $name\n\n" );
-				print( $fh "$VScodeData\n" );
-				close $fh or die "Cannot close $file: $!";
-		} else {
-			#print( "CURRENT DIRECTORY: $cwd\n" );
-			#print( "REFERENCES FOR $word_to_find on PATH: $dir  FILE: $name\n\n" );
-			#print( "$NPPcodeData\n" );
-			#print( " -------------------------------------------------------------------------------- \n" );
-			}
-		$TOTAL_FILES++;
-		#print( "\n=====================> $found_in_file HITS in FILE:  $filename\n\n");
-		}
-	close($fh);# ////
-	if ( $found > 0  )
-	{
-		#print "\n\tVFC LOC: $line_number :: $found HIT(s)\n\n";
-		$HIT_TOTAL += $found ;
-		}
-	return $line_number; }
-$EXTEN  = "\.vfc" ; 
-sub process_files{ my( $dir , $word , $type , $size_args ) = @_;
-	$dir = "." if $dir eq "";
-	opendir(DIR, $dir) or die "\n\t************ Could not open <$dir> in process_files \n";# ////
-	$total_lines  = 0;
-	$FIRST_HIT = "True" ;
-	while (my $file = readdir(DIR)  ) {#while (my $file = readdir(DIR)  && $file !~ m/^\./ ) {
-		next if $file =~ /^\./;   # skip dot files
-		#print ( "\t------------------------- $dir --------- $file  \n" );
-		if ( $EXTEN =~ m/files/ )
-		{
-			#print ( "\tvfc $file == $word \n" );
-			if ( $file =~ m/$word/ && $file !~ m/^_/ &&  $file !~ m/\.vfc$/ )
-			{
-				if (-e "$dir/$file.vfc" )
-				{
-					print "-->";#print "$cyan";
-				}else{
-					#print "$yellow";
-					}
-				print ( "\tvfc $dir/$file  \n" ); 
-			} else {
-				}
-		}else{
-			if ( ( $file =~ m/$EXTEN$/i  ||  '*' =~ m/$EXTEN$/i   ) &&   -f "$dir/$file") {# if ( $file =~ m/$EXTEN$/i    &&   -f "$dir/$file") {
-				#$FOLDER_FIRST_HIT = "False";
-				
-				if ( $dir == "."  )
-				{
-					$VFCfile = "$file" ;
-				}else{
-					$VFCfile = "$dir\\$file" ;
-					}
-				$VFCfile  =~ s/\\\//\\/;
-				$VFCfile = "$dir\\$file" ;
-				#print "   <$EXTEN> \n";
-				$ROOT = basename( $VFCfile ) ; 
-				if (  (  $ROOT !~ /^[_]/ ) )#if ( $VFCfile =~ m/$EXTEN$/i  && (   ".vfc" =~ m/$EXTEN$/i   ||  $ROOT !~ /^[_]/ ) )
-				{
-					$VFCfile =~ tr|/|\\|;
-					if ( ".vfc" =~ m/$EXTEN/i   &&  ".*" !~ m/$EXTEN/i   )
-					{
-						print "$bright_blue";
-						print "vfc2000 $VFCfile\n";# print "=====================\n";
-						print "$default";
-						}
-					$lines = GetLines( $VFCfile , $word , $type  ) ;
-					#if ( $FIRST_HIT == "True" && length($lines)>0 ) { print "<$EXTEN> $VFCfile\n"; $FIRST_HIT = "False";}
-					$total_lines  += $lines ;
-					#print "$VFCfile $lines\n";
-					}
-				}#// //////
-			}
-		}#// //////
-	
-	closedir(DIR);# ////
-	return $total_lines  ;   }
-#main#// // Print the directories ////
-	use Cwd;# ////
-	#my $dir = shift @ARGV or die "Usage: $0 <directory>\n";
-	$TOTAL_FILES  = 0;
-	my $dir = "";
-	my $word = "";
-	my $size = $#ARGV + 1;
-	#print "The size of \@ARGV is $size:  @ARGV\n";
-	if ( $size >=  1) {# ////
-	# // Get the directory and file names from the arguments //
-		$A = $ARGV[0] ;#  file types
-		$A1 = $ARGV[1] ;#  keyword
-		$A2 = $ARGV[2] ;# vfc types
-		if ($A1 =~ s/--save\b//)
-		{
-			$save = 1 ;
-			print( "===>>Logging references in wsc/ and npp/\n" );
-			}
-		#print "============================================>    args: $A, $A1, $A2  \n";
-		$EXTEN= ($A =~ /\.([\w\*]+)$/) ? "\.$1" : ""; 
-		$word = $A1 ;#\
-		$type = $A2 ;#\
-		if ($EXTEN) { 
-			#print "Scanning for $EXTEN ....\n\n";
-			$dir = ".";
-			#print "begin at $dir\nlooking for: $word\n";
-		} else {#// //////
-			$EXTEN  = "\.vfc"  ; 
-			#print "Scanning for $EXTEN  ....\n\n";
-			if ( -d $A )
-			{
-				$dir = $A;
-				#$flag = $ARGV[3];
-			}else{
-				print "default dir\n\n";
-				$dir = ".";
-				$word = $A;#\
-				$type = $A1;#\
-				print "Looking for: $A\n";
-				#$flag = $ARGV[2];
-				}
-			}#// //////
-	}else{
-		
-		print "\n==============================================================\n"; 
-		print( "<directory=$dir>  type=<$EXTEN> <search term=$word> <vfc_type=$type>\n" ) ;#//// ////////
-		print( "\tvfcfind .* \tkeyword - looks for all file types of ANY ext for <keyword>\n" ) ;
-		print( "\tvfcfind .ext \tkeyword - looks for all file types of .ext for <keyword>\n" ) ;
-		print( "\tvfcfind  \tkeyword - looks for all VFC files for <keyword>\n" ) ;
-		print( "\tvfcfind .files \tkeyword - looks for all filenames with <keyword>\n" ) ;
-		print "==============================================================\n\n"; 
-		print( "\nUseage: @ *.ext  <search term> [--save] [vfc_type]\n" ) ;
-		print( "\n\tWhere:  --save flag will save vscode reference files in refs_vsc/ and notepad++ references in refs_npp/\n" );
-		print( "\tWhere:  vfc_type = {input,event,process,set,output,loop,lend,branch,path,bend,end,generic}\n" ) ;
-		exit
-		}
-	#process_files( "$dir" , $word  , $type ) ;
-	# // Use glob to get all the files and directories in the path //
-	my @list_of_files = glob("$dir/*"); 
-	my @list_of_files =  File::Find::Rule->directory->in($dir);
-	print "==============================================================\n"; 
-	print( "Curent directory: $cwd \n" );
-	use File::Find;# ////
-	my @safe_dirs;# ////
-my $wanted = sub {# ////
-	return unless -d;# ////
-return if $File::Find::name =~ /\/?build\//;# // skip any build/ //
-return if $File::Find::name =~ /\/?CMakeFiles\//;# // skip CMake garbage //
-push @safe_dirs, $File::Find::name;# ////
-};#// //////
-find($wanted, '.');#// //////
-# // Debug it: //
-#print "$_\n" for @safe_dirs;
-#print "TOP FOLDER ============> $dir\n";
-#$lines = process_files( "$dir" , $word , $type ) ;
-#print "\t--------------> $dir  :  $lines \n\n";
-$TotalLines += $lines;
-# // Filter out the directories using the -d file test operator //
-my @list_of_dirs = grep { -d } @list_of_files;
-$lines = process_files( "" , $word , $type , $size ) ;
-foreach my $dir (@list_of_dirs) {
-	if ( $dir =~ m/BackupVFC/ || $dir =~ m/BSP_/ || $dir =~ m/build/ || $dir =~ /^\./ )
-	{
-		#print( "\t\t---->Skipping ... $dir\n"  );
-	} else {
-		#print "FOLDER==> $dir:\n";
-		$lines = process_files( "$dir" , $word , $type , $size ) ;
-		$TotalLines += $lines;
-		# print "Lines of VFC in $dir  :  $lines \n\n";
-		}
-	}#// //////
+use strict;
+use warnings;
 
-#sleep(5);
-print( "<directory=$dir>  type=<$EXTEN> <search term=$word> <vfc_type=$type>\n" ) ; 
-print "==> TOTAL SCANNED LOC: $TotalLines :: HITS: $HIT_TOTAL :: FILES: $TOTAL_FILES\n";
+use Cwd 'getcwd';
+use File::Spec;
+use File::Find;
+use File::Basename;
 
+# ------------------------------------------------------------
+# DETECT REPO ROOT BY FINDING .git
+# ------------------------------------------------------------
+# We walk upward from the script's directory until we find a ".git" folder.
+# This is used as the WORKSPACE ROOT for VSCode reference files.
+sub find_repo_root {
+    my $dir = File::Basename::dirname(File::Spec->rel2abs($0));
+
+    while (1) {
+        return $dir if -d File::Spec->catdir($dir, ".git");
+
+        my $parent = File::Basename::dirname($dir);
+        last if $parent eq $dir;
+        $dir = $parent;
+    }
+
+    die "ERROR: Could not locate .git directory above script path.\n";
+}
+
+my $REPO_ROOT = find_repo_root();
+
+# ------------------------------------------------------------
+# SETUP SCRIPT / REF DIRECTORIES
+# ------------------------------------------------------------
+my $SCRIPT_DIR = File::Basename::dirname(File::Spec->rel2abs($0));
+
+# refs_vsc directory is always next to the script
+my $REF_ROOT   = File::Spec->catdir($SCRIPT_DIR, 'refs_vsc');
+mkdir $REF_ROOT unless -d $REF_ROOT;
+
+# Track hits per ref file for summary
+my %HITS_PER_FILE = ();
+
+# Folder filter globals (regex strings, not compiled yet)
+my $FOLDER_FILTER_STR  = "";
+my $FOLDER_EXCLUDE_STR = "";
+
+# Compiled regexes for folder filters (created later)
+my $FOLDER_FILTER_RE   = undef;
+my $FOLDER_EXCLUDE_RE  = undef;
+
+# ------------------------------------------------------------
+# COLOR PRINT (ANSI)
+# ------------------------------------------------------------
+# Uses standard ANSI escape codes. These work on:
+#   - Linux/macOS terminals
+#   - Windows Terminal / PowerShell with VT enabled
+# They may not work on legacy Windows CMD.
+sub cprint {
+    my ($text, $color) = @_;
+    my %colors = (
+        red     => "\033[31m",
+        green   => "\033[32m",
+        yellow  => "\033[33m",
+        blue    => "\033[34m",
+        magenta => "\033[35m",
+        cyan    => "\033[36m",
+        white   => "\033[37m",
+        reset   => "\033[0m"
+    );
+    my $c = $colors{$color} // $colors{reset};
+    print $c . $text . $colors{reset} . "\n";
+}
+
+# ------------------------------------------------------------
+# SAFE TERM FOR REF FILES
+# ------------------------------------------------------------
+# Converts a path into a safe token for naming .ref files.
+sub path_to_safe_term {
+    my ($path) = @_;
+
+    my $rel = File::Spec->abs2rel($path, $SCRIPT_DIR);
+
+    # Normalize separators and sanitize
+    $rel =~ s!\\!/!g;
+    $rel =~ s!/!_!g;
+    $rel =~ s![^A-Za-z0-9._-]!_!g;
+    $rel =~ s/_+/_/g;
+    $rel =~ s/^_+//;
+    $rel =~ s/_+$//;
+
+    return $rel || "unnamed";
+}
+
+# ------------------------------------------------------------
+# AUTO-CORRECT BAD PATTERNS IN ARGV
+# ------------------------------------------------------------
+# This block normalizes some common user mistakes:
+#   "*.*"      → "."
+#   "*.ext"    → ".ext"
+#   "*.h,*.c"  → ".h,.c"
+my @clean;
+foreach my $arg (@ARGV) {
+
+    if ($arg eq "*.*") {
+        print "[AutoCorrect] '*.*' → '.' (scan all files)\n";
+        push @clean, ".";
+        next;
+    }
+
+    if ($arg =~ /^\*\.(\w+)$/) {
+        print "[AutoCorrect] '$arg' → '.$1'\n";
+        push @clean, ".$1";
+        next;
+    }
+
+    if ($arg =~ /,/) {
+        my @parts = split /,/, $arg;
+        my @fixed;
+        foreach my $p (@parts) {
+            if ($p =~ /^\*\.(\w+)$/) {
+                push @fixed, ".$1";
+            } elsif ($p =~ /^\.(\w+)$/) {
+                push @fixed, $p;
+            }
+        }
+        if (@fixed) {
+            print "[AutoCorrect] '$arg' → '" . join(",", @fixed) . "'\n";
+            push @clean, join(",", @fixed);
+            next;
+        }
+    }
+
+    push @clean, $arg;
+}
+@ARGV = @clean;
+
+# ------------------------------------------------------------
+# HANDLE --save FLAG (standalone argument)
+# ------------------------------------------------------------
+# We support:
+#   vfcfind.pl .cpp WIC HAL --save
+#   vfcfind.pl .cpp WIC --save
+#   vfcfind.pl WIC --save
+my $SAVE_MODE = 0;
+
+for (my $i = 0; $i < @ARGV; $i++) {
+    if ($ARGV[$i] eq "--save" || $ARGV[$i] eq "-save") {
+        $SAVE_MODE = 1;
+        splice(@ARGV, $i, 1);
+        last;
+    }
+}
+
+# ------------------------------------------------------------
+# HELP / USAGE
+# ------------------------------------------------------------
+if (@ARGV == 0) {
+    print "\n==============================================================\n";
+    print "  vfcfind.pl — Recursive VFC-aware file / text / filename scanner\n";
+    print "==============================================================\n\n";
+    print "Usage:\n";
+    print "  vfcfind.pl <filter_pattern> <search_key_expression> [folder_filter] [--save]\n\n";
+    print "Arguments:\n";
+    print "  <filter_pattern>\n";
+    print "    - \".vfc\"        → scan files ending in .vfc\n";
+    print "    - \".cpp\"        → scan files ending in .cpp\n";
+    print "    - \".h,.cpp\"     → scan files ending in .h or .cpp\n";
+    print "    - \".\"           → scan all files\n";
+    print "    - \".files\"      → filename-only search mode (see below)\n";
+    print "    - \"*.files\"     → same as .files\n";
+    print "    - \"files\"       → same as .files\n\n";
+    print "  <search_key_expression>\n";
+    print "    - Perl regular expression used to match lines (or filenames in .files mode)\n";
+    print "    - Example: WIC, HAL, MyFunc\\(, ^(?i)wic, etc.\n\n";
+    print "  [folder_filter]\n";
+    print "    - Optional, treated as a Perl regular expression\n";
+    print "    - \"src\"    → only scan folders whose path matches /src/\n";
+    print "    - \"!test\"  → exclude folders whose path matches /test/\n";
+    print "    - \"(?i)src\"→ case-insensitive match (user-controlled)\n\n";
+    print "  [--save]\n";
+    print "    - When present, matching lines are recorded into refs_vsc/*.ref\n";
+    print "      for VSCode \"vfc\" integration.\n\n";
+    print "Special .files mode:\n";
+    print "  - If <filter_pattern> is .files, *.files, or files:\n";
+    print "      * Do NOT scan file contents\n";
+    print "      * Search only filenames using <search_key_expression> as regex\n";
+    print "      * Output: relative/path/to/file:1 (VSCode ctrl-click friendly)\n\n";
+    exit;
+}
+
+# ------------------------------------------------------------
+# ARGUMENT PARSING
+# ------------------------------------------------------------
+# We support:
+#   vfcfind.pl <search_key_expression>
+#       → filter_pattern defaults to .vfc
+#
+#   vfcfind.pl <filter_pattern> <search_key_expression>
+#
+#   vfcfind.pl <filter_pattern> <search_key_expression> <folder_filter>
+#
+my ($filter_pattern, $search_key_expression, $folder_filter);
+
+if (@ARGV == 1) {
+    $filter_pattern        = ".vfc";
+    $search_key_expression = $ARGV[0];
+    $folder_filter         = "";
+}
+elsif (@ARGV == 2) {
+    $filter_pattern        = $ARGV[0];
+    $search_key_expression = $ARGV[1];
+    $folder_filter         = "";
+}
+else {
+    $filter_pattern        = $ARGV[0];
+    $search_key_expression = $ARGV[1];
+    $folder_filter         = $ARGV[2];
+}
+
+# ------------------------------------------------------------
+# HANDLE --save ATTACHED TO EITHER SEARCH KEY OR FOLDER FILTER
+# ------------------------------------------------------------
+# Examples:
+#   vfcfind.pl .cpp WIC--save
+#   vfcfind.pl .cpp WIC HAL--save
+foreach my $ref (\$search_key_expression, \$folder_filter) {
+    next unless defined $$ref;
+    if ($$ref =~ s/(--save|-save)\s*$//) {
+        $SAVE_MODE = 1;
+        $$ref =~ s/\s+$//;
+    }
+}
+
+# ------------------------------------------------------------
+# FOLDER FILTER LOGIC (REGEX, USER-CONTROLLED CASE)
+# ------------------------------------------------------------
+# folder_filter:
+#   ""        → no filter
+#   "src"     → include only folders matching /src/
+#   "!test"   → exclude folders matching /test/
+#   "(?i)src" → user-chosen case-insensitive include
+if (defined $folder_filter && $folder_filter ne "") {
+    if ($folder_filter =~ /^!(.+)/) {
+        $FOLDER_EXCLUDE_STR = $1;
+    } else {
+        $FOLDER_FILTER_STR = $folder_filter;
+    }
+}
+
+# Compile regexes if provided; any regex error is fatal.
+if ($FOLDER_FILTER_STR ne "") {
+    $FOLDER_FILTER_RE = eval { qr/$FOLDER_FILTER_STR/ };
+    die "Invalid folder_filter regex: $FOLDER_FILTER_STR\n" if $@;
+}
+if ($FOLDER_EXCLUDE_STR ne "") {
+    $FOLDER_EXCLUDE_RE = eval { qr/$FOLDER_EXCLUDE_STR/ };
+    die "Invalid folder_filter exclusion regex: $FOLDER_EXCLUDE_STR\n" if $@;
+}
+
+# ------------------------------------------------------------
+# SPECIAL .files MODE
+# ------------------------------------------------------------
+# .files / *.files / files → filename-only search
+# In this mode:
+#   - We do NOT open files
+#   - We match $search_key_expression against the filename (not path)
+#   - We print "relative/path/to/file:1"
+my $FILES_MODE = 0;
+
+if ($filter_pattern eq ".files"
+    || $filter_pattern eq "*.files"
+    || $filter_pattern eq "files")
+{
+    $FILES_MODE = 1;
+}
+
+# ------------------------------------------------------------
+# BUILD EXTENSION LIST (NON .files MODE)
+# ------------------------------------------------------------
+# For non-.files mode, filter_pattern is treated as a list of extensions:
+#   ".cpp"        → files ending in .cpp
+#   ".h,.cpp"     → files ending in .h or .cpp
+#   "."           → all files
+my @EXTLIST = ();
+if (!$FILES_MODE) {
+    if ($filter_pattern =~ /,/) {
+        @EXTLIST = split /,/, $filter_pattern;
+    } else {
+        @EXTLIST = ($filter_pattern);
+    }
+}
+
+# ------------------------------------------------------------
+# GLOBAL HIT COUNTERS
+# ------------------------------------------------------------
+my $HIT_TOTAL = 0;
+my $cwd       = getcwd();
+
+# ------------------------------------------------------------
+# GetLines — scan a single file for matching lines
+# ------------------------------------------------------------
+# Parameters:
+#   $filename           → path to file
+#   $word_to_find       → regex (search_key_expression)
+#
+# Behavior:
+#   - Strips ANSI and non-printable characters
+#   - Skips non-ASCII lines
+#   - Matches lines using /$word_to_find/
+#   - Prints colored output
+#   - Optionally appends VSCode reference data to .ref files when --save
+sub GetLines {
+    my ($filename, $word_to_find) = @_;
+
+    open(my $fh, '<', $filename) or return 0;
+
+    my $line          = 0;
+    my $found         = 0;
+    my $found_in_file = 0;
+    my $VScodeData    = "";
+    my $flag          = 0;
+
+    while (my $row = <$fh>) {
+        # Strip ANSI escape sequences
+        $row =~ s/\x1B[\(\)][0-9A-Za-z]*//g;
+        # Remove non-printable except CR/LF/TAB
+        $row =~ s/[^\x20-\x7E\r\n\t]//g;
+        # Skip non-ASCII lines
+        next if $row =~ /[^\x00-\x7F]/;
+
+        $line++;
+        chomp $row;
+
+        # Use the search_key_expression as a Perl regex
+        if ($row =~ /$word_to_find/) {
+            if ($flag == 0) {
+                cprint("$filename ____________________________________________________________", 'yellow');
+                $flag = 1;
+            }
+
+            $found++;
+            $found_in_file++;
+
+            # vfc command line for VSCode integration
+            cprint("\tvfc $cwd/$filename $line", 'cyan');
+
+            # Build relative path from repo root for .ref file
+            my $rel = File::Spec->abs2rel($filename, $REPO_ROOT);
+            $rel =~ s!\\!/!g;
+
+            $VScodeData .= "$rel:$line\n";
+        }
+    }
+
+    close($fh);
+
+    # If we had hits in this file and --save is enabled, write .ref data
+    if ($found_in_file && $SAVE_MODE) {
+
+        my $search_term = $word_to_find;
+        $search_term =~ s/[\\\/:*?"<>|]+/_/g;
+
+        my $term = path_to_safe_term($filename);
+
+        my $ref = "$REF_ROOT/vsc_${search_term}-${term}.ref";
+
+        my $newfile = ! -f $ref;
+
+        open my $fh2, '>>', $ref or die "Cannot open $ref: $!";
+
+        if ($newfile) {
+            print $fh2 "WORKSPACE ROOT: $REPO_ROOT\n";
+            print $fh2 "REFERENCES FOR $word_to_find\n\n";
+        }
+
+        print $fh2 $VScodeData;
+        close $fh2;
+
+        $HITS_PER_FILE{$ref} += $found_in_file;
+    }
+
+    $HIT_TOTAL += $found;
+    return $line;
+}
+
+# ------------------------------------------------------------
+# process_files — scan all files in a directory (non-recursive)
+# ------------------------------------------------------------
+# Parameters:
+#   $dir    → directory path
+#   $word   → search_key_expression (regex)
+#
+# Behavior:
+#   - In normal mode: filter by @EXTLIST and call GetLines
+#   - In .files mode: ignore contents, match filenames only
+sub process_files {
+    my ($dir, $word) = @_;
+
+    # Normalize "./" and "/./"
+    $dir =~ s!^\./!!;
+    $dir =~ s!/\.!/!g;
+
+    opendir(my $dh, $dir) or return 0;
+
+    my $total = 0;
+
+    while (my $file = readdir($dh)) {
+        next if $file =~ /^\./;  # skip hidden and . / ..
+
+        my $path = "$dir/$file";
+        $path =~ s!/\.!/!g;
+
+        next unless -f $path;
+
+        # .files mode: filename-only search
+        if ($FILES_MODE) {
+            # Match search_key_expression against the filename (not path)
+            if ($file =~ /$word/) {
+                # VSCode-friendly: relative path from repo root, line 1
+                my $rel = File::Spec->abs2rel($path, $REPO_ROOT);
+                $rel =~ s!\\!/!g;
+                cprint("$rel:1", 'green');
+
+                $HIT_TOTAL++;
+            }
+            next;
+        }
+
+        # Normal mode: extension-based filtering
+        my $match = 0;
+        foreach my $ext (@EXTLIST) {
+            # "." means all files
+            if ($ext eq ".") {
+                $match = 1;
+                last;
+            }
+            # Extension match at end of filename
+            if ($file =~ /\Q$ext\E$/) {
+                $match = 1;
+                last;
+            }
+        }
+        next unless $match;
+
+        $total += GetLines($path, $word);
+    }
+
+    closedir($dh);
+    return $total;
+}
+
+# ------------------------------------------------------------
+# DIRECTORY WALK — FULL RECURSION
+# ------------------------------------------------------------
+# We collect all directories under "." (repo root), then:
+#   - Apply folder exclude regex (if any)
+#   - Apply folder include regex (if any)
+#   - Skip some hard-coded build dirs
+#   - Call process_files() for each directory
+my @dirs;
+
+find(
+    sub {
+        return unless -d $_;
+
+        my $d = $File::Find::name;
+        return if $d eq ".";
+
+        $d =~ s!^\./!!;
+        $d =~ s!/\.!/!g;
+
+        # Hard-coded exclusions
+        return if $d =~ /build/;
+        return if $d =~ /CMakeFiles/;
+
+        push @dirs, $d;
+    },
+    '.'
+);
+
+my $TotalLines = 0;
+
+# Process current directory first
+$TotalLines += process_files(".", $search_key_expression);
+
+# Process all discovered directories
+foreach my $d (@dirs) {
+
+    # Additional hard-coded exclusions
+    next if $d =~ /BackupVFC/;
+    next if $d =~ /BSP_/;
+
+    # Apply folder exclude regex if defined
+    if (defined $FOLDER_EXCLUDE_RE) {
+        next if $d =~ $FOLDER_EXCLUDE_RE;
+    }
+
+    # Apply folder include regex if defined
+    if (defined $FOLDER_FILTER_RE) {
+        next unless $d =~ $FOLDER_FILTER_RE;
+    }
+
+    $TotalLines += process_files($d, $search_key_expression);
+}
+
+# ------------------------------------------------------------
+# FINAL SUMMARY
+# ------------------------------------------------------------
+print "\n==============================================================\n";
+print "FILES:\n";
+
+my $ref_count = 0;
+
+foreach my $ref (sort keys %HITS_PER_FILE) {
+    my $hits = $HITS_PER_FILE{$ref};
+    my $name = basename($ref);
+    print "  $name   ($hits hits)\n";
+    $ref_count++;
+}
+
+if ($HIT_TOTAL == 0) {
+    print "\nNO HITS FOUND FOR SEARCH KEY: $search_key_expression\n";
+}
+
+print "\nHITS: $HIT_TOTAL\n";
+print "SEARCH KEY: $search_key_expression\n";
+print "REF FILES: $ref_count\n";
+print "REF DIRECTORY: $REF_ROOT\n";
+print "WORKSPACE ROOT: $REPO_ROOT\n";
+print "==============================================================\n";
+
+exit 0;

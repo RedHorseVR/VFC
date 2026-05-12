@@ -2,7 +2,7 @@
 ;  c1995-2015: Visual Flow Coder by 2LResearch
 ;
 ;  File Name : ParseClip.py.vfc
-;  File Date : 11:10:43 AM - 15:Apr:2026
+;  File Date : 04:51:38 PM - 11:May:2026
 
 event(import subprocess);// 
 event(import pyperclip);// 
@@ -32,7 +32,9 @@ generic(if line.strip() != "");//
 lend();//
 bend());// ////
 end();//
-set(filename = 'temp.cpp');//
+set(filename = 'temp.txt');//
+set(os.system( f'del {filename}.vfc' ));//
+output(print( '------------------------------------------------') );//
 output(print( '------------------------------------------------') );//
 output(print(  text ));//
 output(print( '------------------------------------------------') );//
@@ -41,7 +43,6 @@ path();//
 process(f.write( remove_blank_lines(text) ));//
 bend( );//
 set();//os.system( f"cmd /k cd")
-set(os.system( f'del {filename}.vfc' ));//
 set();// 
 set(os.system( f'vfc {filename}' ));//
 set(os._exit(0));// 
@@ -53,4 +54,4 @@ set(os._exit(0));//
 ;    ParseClip.py   #   .
 ; notepad.exe
 ;INSECTA EMBEDDED ALTSESSION INFORMATION
-; 1970 130 1333 1153 8 300   687   4294964076    python.key  0
+; 1847 76 1438 1667 8 189   759   4294965884    python.key  0
