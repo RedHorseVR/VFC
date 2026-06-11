@@ -143,7 +143,7 @@ class ToolbarApp(QDialog):
             print("------------------------------------------------")
             f.write(clean(content))
 
-        flowcmd = "C:\\Users\\luisr\\Python_parser\\PYPARSE.bat temp.txt"  # flowcmd = f"dir C:/Users/\luisr/Python_parser/PYPARSE.bat temp.py"
+        flowcmd = "C++Parse.bat temp.txt"  # flowcmd = f"dir C:/Users/\luisr/Python_parser/PYPARSE.bat temp.py"
         vfccmd = "C:\\Program Files\\VFCode\\VFC1.0t temp.txt.vfc -Reload"
         print(flowcmd)
         os.system(flowcmd)  # os.system( "dir temp.txt" )

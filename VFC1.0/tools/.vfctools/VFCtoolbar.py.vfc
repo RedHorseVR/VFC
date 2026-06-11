@@ -2,7 +2,7 @@
 ;  c1995-2015: Visual Flow Coder by 2LResearch
 ;
 ;  File Name : VFCtoolbar.py.vfc
-;  File Date : 04:54:04 PM - 11:May:2026
+;  File Date : 09:55:10 AM - 19:May:2026
 
 event(import os);// 
 event(import sys);// 
@@ -182,7 +182,7 @@ path( );//
 output(print( '------------------------------------------------'));//
 output(f.write(  clean( content ) ));//
 bend( );//
-set(flowcmd = "C:\\Users\\luisr\\Python_parser\\PYPARSE.bat temp.txt");//flowcmd = f"dir C:/Users/\luisr/Python_parser/PYPARSE.bat temp.py"
+set(flowcmd = "C++Parse.bat temp.txt");//flowcmd = f"dir C:/Users/\luisr/Python_parser/PYPARSE.bat temp.py"
 set(vfccmd = "C:\\Program Files\\VFCode\\VFC1.0t temp.txt.vfc -Reload");// 
 output(print( flowcmd ));// 
 set( os.system( flowcmd ));//os.system( "dir temp.txt" )
@@ -257,4 +257,4 @@ bend();//
 ;    VFCtoolbar.py   #   .
 ; notepad.exe
 ;INSECTA EMBEDDED ALTSESSION INFORMATION
-; 983 278 1190 1729 34 119   101   4294961481    python.key  0
+; 983 278 1190 1729 173 119   101   4294961481    python.key  0

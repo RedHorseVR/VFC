@@ -1,11 +1,195 @@
+;  IRL FlowCode Version: Version 10.0
+;  c1995-2015: Visual Flow Coder by 2LResearch
+;
+;  File Name : temp.txt.vfc
+;  File Date : 08:22:15 AM - 20:May:2026
+
+
+input(void CMimHsm::processWicMonitorWeapon(wic_mon_intcptr_rsp_t* pMonitorWeaponRsp, QHostAddress& sender, uint16_t nPort) {);// 
+set(const char* wpnState[] = {"WPN_STATE_NOT_PRESENT", "WPN_STATE_OFF", "WPN_STATE_STDBY_RDY", "WPN_STATE_STDBY_NRDY", "WPN_STATE_POST",  "WPN_STATE_INIT",);// 
+set("WPN_STATE_RDY",   "WPN_STATE_TARGETED", "WPN_STATE_TRACKING","WPN_STATE_LAUNCH","WPN_STATE_MSL_AWAY", "WPN_STATE_FAULT"};);// 
 set();//
+set(const char* taStatus[] = {"Aligned or N/A", "Alignment Degraded", "Not Aligned"};);// 
+set();//
+set(const char* alarm[] = {"NOT_OVER_TEMP", "OVER_TEMP_YELLOW", "OVER_TEMP_RED"};);// 
+set();//
+branch(if (pMonitorWeaponRsp != NULL) {);// 
+path();//
+set(launcher_weapon_info_t* pWpn = getWeaponFromWpnIp(pMonitorWeaponRsp->IpAddress););// 
+branch(if (nullptr != pWpn) {);// 
+path();//
+set(bool AlignmentStatusChanged = false;);// 
+set();//
+set();// DetailStatus.TransferAlignStat can be 0 - Aligned or Alignment Not Required; 1 - Alignment Degraded; 2 - Not Aligned
+set();// nStatus.nTaStatus              can be 0 - ALIGNED_OR_NOT_REQUIRED            1 - ALIGNMENT_DEGRADED  2 - NOT_ALIGNED
+set();//
+branch(if (pMonitorWeaponRsp->DetailStatus.TransferAlignStat != (uint32_t)pWpn->nStatus.nTaStatus) AlignmentStatusChanged = true;);// 
+path();//
+bend();//
+set();//
+set(pWpn->nStatus.nTaStatus = launcher_types::missile_trans_align_status::ALIGNED_OR_NOT_REQUIRED;);// 
+set();//
+set(missile_alarm_t AlarmReported = NOT_OVER_TEMP;);// 
+branch(if (LauncherDefines::BIT_SET == pMonitorWeaponRsp->DetailStatus.OverTempAlarmRed));// 
+path();//
+set(AlarmReported = OVER_TEMP_RED;);// 
+path(else if (LauncherDefines::BIT_SET == pMonitorWeaponRsp->DetailStatus.OverTempAlarmYellow));// 
+set(AlarmReported = OVER_TEMP_YELLOW;);// 
+set(pWpn->nMonitorState = pMonitorWeaponRsp->State;);// 
+set(pWpn->nMonitorStatus = pMonitorWeaponRsp->DetailStatus;);// 
+set();//
+set(dbgLog(LOG_TYPE_DEBUG, "%s WIC_MON_INTCPTR_RSP: Weapon IP: %s", this->pStateTrace, QHostAddress(pWpn->nIpAddr.laddr).toString().toStdString().c_str()););// 
+set(dbgLog(LOG_TYPE_DEBUG, "    State: %s", wpnState[pWpn->nMonitorState]););// 
+set(dbgLog(LOG_TYPE_DEBUG, "    TaStatus: %s", taStatus[pWpn->nStatus.nTaStatus]););// 
+set(dbgLog(LOG_TYPE_DEBUG, "    Alarm: %s", alarm[AlarmReported]););// 
+set();//
+set();// If TE=0 and BF=2, set selectability to RECOVERABLE_FAULT and skip state-specific processing
+branch(if ((LauncherDefines::BIT_NOT_SET == pMonitorWeaponRsp->DetailStatus.TerminatingFault) &&);// 
+path((wic_mon_intrcptr_types::bit_failure_enum::BIT_FAILURE == pMonitorWeaponRsp->DetailStatus.BIT_Failure) && pMonitorWeaponRsp->State != WPN_STATE_FAULT) {);//// //
+set();//
+set(dbgLog(LOG_TYPE_NOTICE, "Weapon at index %d(ID:%d) has RECOVERABLE FAULT (TE=0, BF=2)", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::RECOVERABLE_FAULT););// 
+path(} else {);// 
+branch(switch (pMonitorWeaponRsp->State) {);// 
+path(case WPN_STATE_RDY:);// 
+set({);// 
+set();// Reset CBIT counter when an interceptor passes CBIT or Power Up BIT.
+set(setCbitFaultCounterForIntcptr(pWpn, GLOBALS::launcherSettings););// 
+set();//
+set();// If BIT passed after previously reporting a recoverable fault, reset the selectability to selectable.
+branch(if (intrcptr_stat::Selectability::RECOVERABLE_FAULT == pWpn->nStatus.nSelectability &&);// 
+path();//
+
+input(wic_mon_intrcptr_types::bit_failure_enum::BIT_OK == pMonitorWeaponRsp->DetailStatus.BIT_Failure) {);// 
+set(pWpn->nStatus.nSelectability = intrcptr_stat::Selectability::SELECTABLE;);// 
+bend(});// 
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::SELECTABLE););// 
+set(dbgLog(LOG_TYPE_NOTICE, "Weapon at index %d(ID:%d) is now HOT", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+output(sendExecMonWpnEngageRsp(pWpn->nIpAddr.laddr, pMonitorWeaponRsp););// 
+end(break;);// 
+end(});// 
+path(case WPN_STATE_STDBY_RDY:);// 
+set(__attribute__((fallthrough)););// 
+path(case WPN_STATE_STDBY_NRDY:);// 
+set({);// 
+set();// Additionnally reset the counter here since this is a nominal state.
+set(setCbitFaultCounterForIntcptr(pWpn, GLOBALS::launcherSettings););// 
+set();//
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::STANDBY););// 
+set();//
+branch(if (SELECTED_FOR_HOT == pWpn->nMissilePrep || SELECTED_FOR_HOT == pWpn->nReplacementPrep) {);// 
+path();//
+branch(if (AlignmentStatusChanged) {);// 
+path();//
+set(dbgLog(LOG_TYPE_NOTICE, "Weapon at index %d(ID:%d) needs alignment to progress to HOT", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+bend(});// 
+path(} else {);// 
+set(dbgLog(LOG_TYPE_NOTICE, "Weapon at index %d(ID:%d) is now in STANDBY", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+bend(});// 
+end(break;);// 
+end(});// 
+path(case WPN_STATE_MSL_AWAY:);// 
+set({);// 
+set(pWpn->nMonitorEnabled = 0;);// 
+set();//
+set(dbgLog(LOG_TYPE_NOTICE, "Weapon at index %d(ID:%d) is now in MISSILE AWAY", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+set();//
+branch(if (pWpn->nStatus.nSelectability != intrcptr_stat::Selectability::NOT_AVAILABLE) {);// 
+path();//
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::NOT_AVAILABLE););// 
+bend(});// 
+set();// SRS_977: If the incoming state is WPN_STATE_MSL_AWAY, send an EXEC_MON_WPN_ENGAGEMENT_RSP message to the Engage object
+output(sendExecMonWpnEngageRsp(pWpn->nIpAddr.laddr, pMonitorWeaponRsp););// 
+end(break;);// 
+end(});// 
+path(case WPN_STATE_TRACKING:);// 
+set(__attribute__((fallthrough)););// 
+path(case WPN_STATE_TARGETED:);// 
+set(__attribute__((fallthrough)););// 
+path(case WPN_STATE_LAUNCH:);// 
+set({);// 
+branch(if (pWpn->nStatus.nSelectability != intrcptr_stat::Selectability::COMMITTED) {);// 
+path();//
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::COMMITTED););// 
+set();//
+set(dbgLog(LOG_TYPE_NOTICE, "Weapon at index %d(ID:%d) is now in COMMITTED", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+bend(});// 
+output(sendExecMonWpnEngageRsp(pWpn->nIpAddr.laddr, pMonitorWeaponRsp););// 
+end(break;);// 
+end(});// 
+path(case WPN_STATE_FAULT:);// 
+set({);// 
+set(dbgLog(LOG_TYPE_NOTICE, "Weapon at index %d(ID:%d) is now in FAULT", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::NON_RECOVERABLE_FAULT););// 
+output(processWpnFaultState(pWpn, pMonitorWeaponRsp, sender, nPort););// 
+output(sendExecMonWpnEngageRsp(pWpn->nIpAddr.laddr, pMonitorWeaponRsp););// 
+end(break;);// 
+end(});// 
+path(case WPN_STATE_POST:);// 
+set(__attribute__((fallthrough)););// 
+path(case WPN_STATE_INIT:);// 
+set({);// 
+set(dbgLog(LOG_TYPE_DEBUG, "Weapon at index %d(ID:%d) is now in INITIALIZING", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+branch(if (wic_mon_intrcptr_types::bit_failure_enum::BIT_IN_PROGRESS == pWpn->nMonitorStatus.BIT_Failure) {);// 
+path();//
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::BIT_IN_PROGRESS););// 
+path(} else {);// 
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::INITIALIZING););// 
+bend(});// 
+end(break;);// 
+end(});// 
+path(case WPN_STATE_NOT_PRESENT:);// 
+set({);// 
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::NOT_AVAILABLE););// 
+end(break;);// 
+end(});// 
+path(case WPN_STATE_OFF:);// 
+set({);// 
+set();// Don't want to have missile show WPN_STATE_OFF and appear to be
+output(//"present" if the missile has already launched.  Launched missiles);//
+set();// will have their selectability as NOT_AVAILABLE
+branch(if (pWpn->nStatus.nSelectability != intrcptr_stat::Selectability::NOT_AVAILABLE) {);// 
+path();//
+branch(if ((LauncherDefines::BIT_SET == pWpn->nMonitorStatus.TerminatingFault) || (pWpn->nStatus.nHazard != NO_HAZARD_NO_MISFIRE)));// 
+path();//
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::NON_RECOVERABLE_FAULT););// 
+path(else if ((LauncherDefines::BIT_NOT_SET == pWpn->nMonitorStatus.TerminatingFault) &&);// 
+set((wic_mon_intrcptr_types::bit_failure_enum::BIT_FAILURE == pWpn->nMonitorStatus.BIT_Failure)));// 
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::RECOVERABLE_FAULT););// 
+path(else);// 
+set(ProcessSelectability(pWpn, intrcptr_stat::Selectability::OFF););// 
+set();//
+branch(if (m_mapWeaponPowerOffReqs.contains(pWpn)) {);// 
+path();//
+set(dbgLog(LOG_TYPE_NOTICE, "Weapon at index %d(ID:%d) is now OFF", pWpn->nWpnIndex, pWpn->nIpAddr.bAddr[0]););// 
+set();//
+set(pWpn->nMonitorEnabled = 0;);// 
+set(m_mapWeaponPowerOffReqs.remove(pWpn););// 
+set(pWpn->nMissilePrep = NOT_SELECTED;);// 
+set(pWpn->nReplacementPrep = NOT_SELECTED;);// 
+bend(});// 
+end(break;);// 
+bend(});// 
+bend(});// 
+path(default:);// 
+set({);// 
+end(break;);// 
+end(});// 
+bend(});// 
+bend(});// 
+bend(});// 
+bend(});// 
+bend(});// 
+end(});// 
 set();//
 set();//
 set();//
 
+
+
 ;INSECTA EMBEDDED SESSION INFORMATION
 ; 255 16777215 65280 16777088 16711680 32896 8421504 0 255 255 16777215 4227327 2960640
-; temp.txt // 
+;    temp.txt   //   ;
 ; notepad.exe
 ;INSECTA EMBEDDED ALTSESSION INFORMATION
-; 880 168 766 1516 0 110   392   31 C++.key  0
+; 2069 1062 1549 693 112 150   4294956858   4294965737    C++.key  0
