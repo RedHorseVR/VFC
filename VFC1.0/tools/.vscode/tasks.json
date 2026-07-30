@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
 
- {
+        {
             "label": "clear-ref-problems",
             "type": "shell",
             "command": "echo ''",
@@ -35,9 +35,9 @@
         },
 
         {
-            "label": "vfc-parse-clip",
+            "label": "vfc-toolbar",
             "type": "shell",
-            "command": "vfcparseclip",
+            "command": "start python .vfctools/VFCtoolbar.py",
             "group": {
                 "kind": "build",
                 "isDefault": false
@@ -45,7 +45,7 @@
         },
         
         {
-            "label": "vfc-flowgraph-tool",
+            "label": "vfc-flow-the-file",
             "type": "shell",
             "command": "vfc ${file} ${lineNumber}",
             "group": {
