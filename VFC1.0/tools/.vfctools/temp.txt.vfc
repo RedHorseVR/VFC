@@ -1,4 +1,173 @@
-set();//
+set(/* includes */	// FILE: "winproc_externs.h";);//
+event(#include "winproc_externs.h");// 
+set();// ---------------------------------------------------------------------- ;
+set(/*------------*/);// 
+set(LRESULT CALLBACK _Colors(HWND hDlg, UINT uMessage, WPARAM wParam, LPARAM lParam) {);// 
+set(static CHOOSECOLOR cc;);// 
+set(static COLORREF _TRACE_PEN_COLOR;);// 
+set(static COLORREF _TRACE_BRUSH_COLOR;);// 
+set(static COLORREF _UNDEF_PEN_COLOR;);// 
+set(static COLORREF _BREAK_PEN_COLOR;);// 
+set(static COLORREF _BREAK_BRUSH_COLOR;);// 
+set(static COLORREF _CURRENT_BRUSH_COLOR;);// 
+set(static COLORREF _CURRENT_TEXT_COLOR;);// 
+set(static COLORREF _ERROR_PEN_COLOR;);// 
+set(static COLORREF _INTERP_PEN_COLOR;);// 
+set(static COLORREF _TEXT_COLOR;);// 
+set(static COLORREF _PEN_COLOR;);// 
+set(static COLORREF _BACKGROUND_COLOR;);// 
+set(static COLORREF _COMMENTS_COLOR;);// 
+set(static COLORREF _DIAGRAM_THICKNESS;);// 
+branch(switch (uMessage) {);// 
+path();//
+path(case WM_INITDIALOG:);// 
+set(memset(&cc, 0, sizeof(CHOOSECOLOR)););// 
+set(cc.lStructSize = sizeof(CHOOSECOLOR););// 
+set(cc.hwndOwner = hDlg;);// 
+set(cc.hInstance = NULL;);// 
+set(cc.lpCustColors = colors;);// 
+set(cc.Flags = CC_RGBINIT;);// 
+set(cc.lCustData = 0L;);// 
+set(cc.lpfnHook = NULL;);// 
+set(cc.lpTemplateName = (LPSTR)NULL;);// 
+set(_TRACE_PEN_COLOR = TRACE_PEN_COLOR;);// 
+set(_TRACE_BRUSH_COLOR = TRACE_BRUSH_COLOR;);// 
+set(_UNDEF_PEN_COLOR = UNDEF_PEN_COLOR;);// 
+set(_BREAK_PEN_COLOR = BREAK_PEN_COLOR;);// 
+set(_BREAK_BRUSH_COLOR = BREAK_BRUSH_COLOR;);// 
+set(_CURRENT_BRUSH_COLOR = CURRENT_BRUSH_COLOR;);// 
+set(_CURRENT_TEXT_COLOR = CURRENT_TEXT_COLOR;);// 
+set(_ERROR_PEN_COLOR = ERROR_PEN_COLOR;);// 
+set(_INTERP_PEN_COLOR = INTERP_PEN_COLOR;);// 
+set(_TEXT_COLOR = TEXT_COLOR;);// 
+set(_PEN_COLOR = PEN_COLOR;);// 
+set(_BACKGROUND_COLOR = BACKGROUND_COLOR;);// 
+set(_COMMENTS_COLOR = COMMENTS_COLOR;);// 
+set(_DIAGRAM_THICKNESS = DIAGRAM_THICKNESS;);// 
+set();// EnableMenuItem(GetMenu(MainWindow),ID_OPTIONS_COLORS,FALSE ); ;
+end(break;);// 
+path(case WM_COMMAND:);// 
+branch(switch (GET_WM_COMMAND_ID(wParam, lParam)) {);// 
+path();//
+path(case IDC_MONOCHROME:);// 
+output(PrintObject.print_colors(););// 
+set(DIAGRAM_THICKNESS = 1;);// 
+end(break;);// 
+path(case ID_DEFAULTS:);// 
+set(TRACE_PEN_COLOR = DEF_TRACE_PEN_COLOR;);// TRACE_PEN_COLOR = DEF_TRACE_COLOR;;
+set(TRACE_BRUSH_COLOR = DEF_TRACE_BRUSH_COLOR;);// 
+set(UNDEF_PEN_COLOR = DEF_UNDEF_PEN_COLOR;);// 
+set(BREAK_PEN_COLOR = DEF_BREAK_PEN_COLOR;);// 
+set(BREAK_BRUSH_COLOR = DEF_BREAK_BRUSH_COLOR;);// 
+set(CURRENT_BRUSH_COLOR = DEF_CURRENT_BRUSH_COLOR;);// 
+set(CURRENT_TEXT_COLOR = DEF_CURRENT_TEXT_COLOR;);// 
+set(ERROR_PEN_COLOR = DEF_ERROR_PEN_COLOR;);// 
+set(INTERP_PEN_COLOR = DEF_INTERP_PEN_COLOR;);// 
+set(TEXT_COLOR = DEF_TEXT_COLOR;);// 
+set(PEN_COLOR = DEF_PEN_COLOR;);// 
+set(BACKGROUND_COLOR = DEF_BACKGROUND_COLOR;);// 
+set(COMMENTS_COLOR = DEF_COMMENTS_COLOR;);// 
+set(DIAGRAM_THICKNESS = 1;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_COMMENTS:);// 
+set(cc.rgbResult = COMMENTS_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(COMMENTS_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_BACKGROUND:);// 
+set(cc.rgbResult = BACKGROUND_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(BACKGROUND_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_TRACE:);// 
+set(cc.rgbResult = TRACE_BRUSH_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(TRACE_BRUSH_COLOR = cc.rgbResult;);// 
+set(TRACE_PEN_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_BREAK:);// 
+set(cc.rgbResult = BREAK_BRUSH_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(BREAK_BRUSH_COLOR = cc.rgbResult;);// 
+set(BREAK_PEN_COLOR = ~BREAK_BRUSH_COLOR;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_UNDEFPEN:);// 
+set(cc.rgbResult = UNDEF_PEN_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(UNDEF_PEN_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_CURRENT:);// 
+set(cc.rgbResult = CURRENT_BRUSH_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(CURRENT_BRUSH_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_CURRENTTEXT:);// 
+set(cc.rgbResult = CURRENT_TEXT_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(CURRENT_TEXT_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_ERROR:);// 
+set(cc.rgbResult = ERROR_PEN_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(ERROR_PEN_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_INTERPRET:);// 
+set(cc.rgbResult = INTERP_PEN_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(INTERP_PEN_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_TEXT:);// 
+set(cc.rgbResult = TEXT_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(TEXT_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDC_PEN:);// 
+set(cc.rgbResult = PEN_COLOR;);// 
+set(ChooseColor(&cc););// 
+set(PEN_COLOR = cc.rgbResult;);// 
+set(WinprocObject.ChangeColors(););// 
+end(break;);// 
+path(case IDCANCEL:);// 
+set(TRACE_PEN_COLOR = _TRACE_PEN_COLOR;);// 
+set(TRACE_BRUSH_COLOR = _TRACE_BRUSH_COLOR;);// 
+set(UNDEF_PEN_COLOR = _UNDEF_PEN_COLOR;);// 
+set(BREAK_PEN_COLOR = _BREAK_PEN_COLOR;);// 
+set(BREAK_BRUSH_COLOR = _BREAK_BRUSH_COLOR;);// 
+set(CURRENT_BRUSH_COLOR = _CURRENT_BRUSH_COLOR;);// 
+set(CURRENT_TEXT_COLOR = _CURRENT_TEXT_COLOR;);// 
+set(ERROR_PEN_COLOR = _ERROR_PEN_COLOR;);// 
+set(INTERP_PEN_COLOR = _INTERP_PEN_COLOR;);// 
+set(TEXT_COLOR = _TEXT_COLOR;);// 
+set(PEN_COLOR = _PEN_COLOR;);// 
+set(BACKGROUND_COLOR = _BACKGROUND_COLOR;);// 
+set(COMMENTS_COLOR = _COMMENTS_COLOR;);// 
+set(DIAGRAM_THICKNESS = _DIAGRAM_THICKNESS;);// 
+set(WinprocObject.ChangeColors(););// 
+path(case IDOK:);// 
+set({);// 
+set();// EnableMenuItem(GetMenu(MainWindow),ID_OPTIONS_COLORS,TRUE ); ;
+set(EndDialog(hDlg, TRUE););// 
+end(return (TRUE););// 
+end(});// 
+end(break;);// 
+bend(});// 
+bend(});// 
+end(return FALSE;);// 
+set(});// 
+set();// FlowCode File: ChangeColors.ins;
+set();// Export  File: ChangeColors.cpp;
+set();// Export  Date: 04:51:04 PM - 27:Feb:2002;
 set();//
 set();//
 set();//
